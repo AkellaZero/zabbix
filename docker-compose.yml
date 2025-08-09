@@ -1,6 +1,8 @@
+version: '3.8'
+
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: zabbix-postgres
     environment:
       POSTGRES_USER: zabbix
@@ -8,11 +10,13 @@ services:
       POSTGRES_DB: zabbix
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
     restart: unless-stopped
 
   zabbix-server:
     build:
-      context: ./server
+      context: ./zabbix-server
       dockerfile: Dockerfile
     container_name: zabbix-server
     environment:
@@ -24,10 +28,12 @@ services:
       - postgres
     ports:
       - "10051:10051"
+    networks:
+      - internal
     restart: unless-stopped
 
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-pgsql:latest
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-latest
     container_name: zabbix-web
     environment:
       DB_SERVER_HOST: postgres
@@ -38,32 +44,30 @@ services:
       PHP_TZ: Europe/Amsterdam
     expose:
       - "8080"
-    depends_on:
-      - zabbix-server
+    networks:
+      - internal
+      - proxy
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana-oss:latest
+    image: grafana/grafana:latest
     container_name: grafana
+    environment:
+      - GF_INSTALL_PLUGINS=alexanderzobnin-zabbix-app
     expose:
       - "3000"
     volumes:
       - grafana-storage:/var/lib/grafana
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:latest
-    container_name: reverse-proxy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-    depends_on:
-      - zabbix-web
-      - grafana
+    networks:
+      - internal
+      - proxy
     restart: unless-stopped
 
 volumes:
   pgdata:
   grafana-storage:
+
+networks:
+  internal:
+  proxy:
+    external: true
