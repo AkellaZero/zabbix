@@ -1,10 +1,13 @@
-FROM zabbix/zabbix-server-pgsql:latest
+FROM zabbix/zabbix-server-pgsql:alpine-latest
+
 USER root
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip && \
+
+RUN apk update && \
+    apk add --no-cache python3 py3-pip && \
     pip3 install --no-cache-dir \
-    requests \
-    pandas \
-    numpy \
-    psycopg2-binary
+        requests \
+        pandas \
+        numpy \
+        psycopg2-binary
+
 USER zabbix
